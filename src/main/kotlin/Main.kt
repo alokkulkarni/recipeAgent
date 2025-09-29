@@ -175,10 +175,13 @@ suspend fun main() {
 
         promptBuilder.append("**DOCUMENT CREATION WORKFLOW:**\n")
         promptBuilder.append("STEP 1: Use Jira tools to gather ALL project and sprint information for Flutter project with sprint FLUT1\n")
-        promptBuilder.append("STEP 2: Analyze the retrieved data according to the instructions\n")
-        promptBuilder.append("STEP 3: Create Test Strategy document using 'createTestStrategyDocument' tool\n")
-        promptBuilder.append("STEP 4: Create Test Approach document using 'createTestApproachDocument' tool\n")
-        promptBuilder.append("STEP 5: Create Test Plan document using 'createTestPlanDocument' tool\n")
+        promptBuilder.append("STEP 2: Create a Jira data fingerprint with epic/story summaries and counts\n")
+        promptBuilder.append("STEP 3: Use 'checkExistingDocument' tool for each document type to see if similar documents exist\n")
+        promptBuilder.append("STEP 4: If existing documents found with matching requirements, use those and skip creation\n")
+        promptBuilder.append("STEP 5: Only create new documents if no matching existing documents found:\n")
+        promptBuilder.append("   - Use 'createTestStrategyDocument' tool to create the Test Strategy document\n")
+        promptBuilder.append("   - Use 'createTestApproachDocument' tool to create the Test Approach document\n")
+        promptBuilder.append("   - Use 'createTestPlanDocument' tool to create the Test Plan document\n")
         promptBuilder.append("STEP 6: Use 'listCreatedDocuments' tool to provide download links\n")
         promptBuilder.append("STEP 7: Validate each document against the validation checklist\n\n")
 
@@ -247,6 +250,14 @@ suspend fun main() {
             promptBuilder.append("□ Include rationale for all testing approach selections\n")
             promptBuilder.append("□ Ensure alignment with sprint goals and capacity\n")
             promptBuilder.append("□ Address both functional and non-functional testing needs\n\n")
+
+            promptBuilder.append("**DOCUMENT REUSE STRATEGY:**\n")
+            promptBuilder.append("Before creating any new document, you MUST:\n")
+            promptBuilder.append("1. Create a fingerprint of the current Jira data (epic/story summaries, counts, etc.)\n")
+            promptBuilder.append("2. Use 'checkExistingDocument' tool to see if similar documents already exist\n")
+            promptBuilder.append("3. If existing documents are found with matching requirements, reuse them\n")
+            promptBuilder.append("4. Only create new documents if no matching existing documents are found\n")
+            promptBuilder.append("5. Always inform the user whether documents are reused or newly created\n\n")
         }
 
         promptBuilder.append("**PROJECT CONTEXT FROM RETRIEVED DATA:**\n")
