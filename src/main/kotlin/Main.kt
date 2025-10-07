@@ -2,16 +2,13 @@ package com.alok
 
 import ai.koog.agents.core.agent.AIAgent
 import ai.koog.agents.core.tools.ToolRegistry
-import ai.koog.agents.core.tools.annotations.LLMDescription
-import ai.koog.agents.core.tools.annotations.Tool
 import ai.koog.agents.core.tools.reflect.tools
+import ai.koog.prompt.dsl.prompt
 import ai.koog.prompt.executor.clients.openai.OpenAILLMClient
 import ai.koog.prompt.executor.clients.openai.OpenAIModels
 import ai.koog.prompt.executor.llms.SingleLLMPromptExecutor
-import com.alok.jira.JiraService
 import com.alok.document.DocumentCreationService
-import kotlinx.serialization.Serializable
-import java.io.File
+import com.alok.jira.JiraService
 
 //TIP To <b>Run</b> code, press <shortcut actionId="Run"/> or
 // click the <icon src="AllIcons.Actions.Execute"/> icon in the gutter.
@@ -21,7 +18,8 @@ suspend fun main() {
     println("=".repeat(80))
 
     val client = OpenAILLMClient(System.getenv("OPENAI_API_KEY"))
-    val model = OpenAIModels.CostOptimized.GPT4_1Mini
+//    val model = OpenAIModels.CostOptimized.GPT4_1Mini
+    val model = OpenAIModels.Chat.GPT5
     val executor = SingleLLMPromptExecutor(client)
 
     // Create services
@@ -29,14 +27,14 @@ suspend fun main() {
     val documentService = DocumentCreationService()
 
     // Read test documentation creation instructions
-    val testDocInstructionsFile = File(".agents/instructions/testDocCreationInstructions.md")
-    val testDocInstructions = if (testDocInstructionsFile.exists()) {
-        println("📖 Loading Test Documentation Creation Instructions...")
-        testDocInstructionsFile.readText()
-    } else {
-        println("⚠️ Test documentation instructions file not found at ${testDocInstructionsFile.absolutePath}")
-        ""
-    }
+//    val testDocInstructionsFile = File(".agents/instructions/testDocCreationInstructions.md")
+//    val testDocInstructions = if (testDocInstructionsFile.exists()) {
+//        println("📖 Loading Test Documentation Creation Instructions...")
+//        testDocInstructionsFile.readText()
+//    } else {
+//        println("⚠️ Test documentation instructions file not found at ${testDocInstructionsFile.absolutePath}")
+//        ""
+//    }
 
     // Test and display Jira tool responses before using with agent
     println("🔍 Testing Jira Service Tools...")
@@ -155,112 +153,19 @@ suspend fun main() {
         tools(documentService)
     }
 
-    val agent = AIAgent(
-        llmModel = model,
-        toolRegistry = toolRegistry,
-        executor = executor
-    )
-
     try {
-        // Build comprehensive prompt with test documentation instructions and Jira data
+        // Build a simple prompt with Jira data and instruction to follow the guidelines
         val promptBuilder = StringBuilder()
 
-        promptBuilder.append("You are a professional test documentation expert tasked with creating comprehensive test documentation based on Jira project data and specific instructions.\n\n")
-
-        promptBuilder.append("**CRITICAL REQUIREMENTS:**\n")
-        promptBuilder.append("1. You MUST thoroughly read and follow ALL the test documentation creation instructions provided below\n")
-        promptBuilder.append("2. You MUST use the document creation tools to actually create and save the documents\n")
-        promptBuilder.append("3. You MUST validate each document against the provided checklist before completion\n")
-        promptBuilder.append("4. You MUST gather all Jira data first using the available tools\n\n")
-
-        promptBuilder.append("**DOCUMENT CREATION WORKFLOW:**\n")
-        promptBuilder.append("STEP 1: Use Jira tools to gather ALL project and sprint information for Flutter project with sprint FLUT1\n")
-        promptBuilder.append("STEP 2: Create a Jira data fingerprint with epic/story summaries and counts\n")
-        promptBuilder.append("STEP 3: Use 'checkExistingDocument' tool for each document type to see if similar documents exist\n")
-        promptBuilder.append("STEP 4: If existing documents found with matching requirements, use those and skip creation\n")
-        promptBuilder.append("STEP 5: Only create new documents if no matching existing documents found:\n")
-        promptBuilder.append("   - Use 'createTestStrategyDocument' tool to create the Test Strategy document\n")
-        promptBuilder.append("   - Use 'createTestApproachDocument' tool to create the Test Approach document\n")
-        promptBuilder.append("   - Use 'createTestPlanDocument' tool to create the Test Plan document\n")
-        promptBuilder.append("STEP 6: Use 'listCreatedDocuments' tool to provide download links\n")
-        promptBuilder.append("STEP 7: Validate each document against the validation checklist\n\n")
-
-        if (testDocInstructions.isNotEmpty()) {
-            promptBuilder.append("**MANDATORY TEST DOCUMENTATION CREATION INSTRUCTIONS:**\n")
-            promptBuilder.append("READ THESE INSTRUCTIONS CAREFULLY AND FOLLOW EVERY SECTION AND GUIDELINE:\n\n")
-            promptBuilder.append(testDocInstructions)
-            promptBuilder.append("\n\n")
-
-            promptBuilder.append("**DOCUMENT VALIDATION CHECKLIST:**\n")
-            promptBuilder.append("For each document created, ensure it includes ALL the following components:\n\n")
-
-            promptBuilder.append("**TEST STRATEGY DOCUMENT CHECKLIST:**\n")
-            promptBuilder.append("□ Executive Summary with scope, objectives, and risk assessment\n")
-            promptBuilder.append("□ Vision and Mission Definition with clear testing objectives\n")
-            promptBuilder.append("□ Test Scope with prioritization strategy based on Jira epics/stories\n")
-            promptBuilder.append("□ Test Approach and Types with Test Pyramid Implementation (70-20-10 distribution)\n")
-            promptBuilder.append("□ Automation Strategy with High ROI priorities and framework selection\n")
-            promptBuilder.append("□ Roles and Responsibilities with Shared Ownership Model\n")
-            promptBuilder.append("□ Test Environment Strategy with environment management details\n")
-            promptBuilder.append("□ Tools and Technology Stack specifications\n")
-            promptBuilder.append("□ Entry and Exit Criteria clearly defined\n")
-            promptBuilder.append("□ Risk Management and Metrics with detailed framework and KPIs\n")
-            promptBuilder.append("□ Continuous Improvement Strategy with feedback loops\n")
-            promptBuilder.append("□ All sections must reference actual Jira data (epics, stories, tasks)\n\n")
-
-            promptBuilder.append("**TEST APPROACH DOCUMENT CHECKLIST:**\n")
-            promptBuilder.append("□ Introduction with project background from Jira data\n")
-            promptBuilder.append("□ Test Planning Details with sprint-specific focus\n")
-            promptBuilder.append("□ Test Design Approach using BDD/TDD methodology\n")
-            promptBuilder.append("□ Test Execution Strategy aligned with sprint timeline\n")
-            promptBuilder.append("□ Test Data and Environment Management\n")
-            promptBuilder.append("□ Test Automation Strategy with CI/CD integration\n")
-            promptBuilder.append("□ Reporting and Metrics with stakeholder communication\n")
-            promptBuilder.append("□ Agile Testing Approaches Framework implementation\n")
-            promptBuilder.append("□ Testing Approach Selection Guide applied to stories\n")
-            promptBuilder.append("□ Sprint-Specific Testing Implementation details\n")
-            promptBuilder.append("□ All testing approaches mapped to specific Jira stories/epics\n\n")
-
-            promptBuilder.append("**TEST PLAN DOCUMENT CHECKLIST:**\n")
-            promptBuilder.append("□ All 9 Key Steps of Agile Test Plan Creation implemented:\n")
-            promptBuilder.append("  □ Step 1: Requirements understanding from Jira data\n")
-            promptBuilder.append("  □ Step 2: Test objectives and scope definition\n")
-            promptBuilder.append("  □ Step 3: Right testing approach selection\n")
-            promptBuilder.append("  □ Step 4: Test environment and data requirements\n")
-            promptBuilder.append("  □ Step 5: Test design and execution planning\n")
-            promptBuilder.append("  □ Step 6: Testing resources allocation\n")
-            promptBuilder.append("  □ Step 7: Defect management process\n")
-            promptBuilder.append("  □ Step 8: Testing timelines establishment\n")
-            promptBuilder.append("  □ Step 9: Communication and collaboration plan\n")
-            promptBuilder.append("□ Requirements Traceability Matrix with all Jira epics/stories\n")
-            promptBuilder.append("□ Testing Approach Matrix mapping stories to approaches\n")
-            promptBuilder.append("□ Resource Allocation Plan with skill requirements\n")
-            promptBuilder.append("□ Environment and Data Requirements table\n")
-            promptBuilder.append("□ Testing Timeline and Milestones with dependencies\n")
-            promptBuilder.append("□ Integration with Agile Ceremonies detailed\n")
-            promptBuilder.append("□ Quality Gates and Success Criteria defined\n")
-            promptBuilder.append("□ Best Practices for Agile Test Plan Creation included\n\n")
-
-            promptBuilder.append("**CONTENT QUALITY REQUIREMENTS:**\n")
-            promptBuilder.append("□ All documents must reference specific Jira data (epic keys, story keys, tasks)\n")
-            promptBuilder.append("□ Include actual acceptance criteria from stories where available\n")
-            promptBuilder.append("□ Map testing approaches to story complexity and risk levels\n")
-            promptBuilder.append("□ Use professional formatting with tables and matrices\n")
-            promptBuilder.append("□ Provide specific, measurable criteria and timelines\n")
-            promptBuilder.append("□ Include rationale for all testing approach selections\n")
-            promptBuilder.append("□ Ensure alignment with sprint goals and capacity\n")
-            promptBuilder.append("□ Address both functional and non-functional testing needs\n\n")
-
-            promptBuilder.append("**DOCUMENT REUSE STRATEGY:**\n")
-            promptBuilder.append("Before creating any new document, you MUST:\n")
-            promptBuilder.append("1. Create a fingerprint of the current Jira data (epic/story summaries, counts, etc.)\n")
-            promptBuilder.append("2. Use 'checkExistingDocument' tool to see if similar documents already exist\n")
-            promptBuilder.append("3. If existing documents are found with matching requirements, reuse them\n")
-            promptBuilder.append("4. Only create new documents if no matching existing documents are found\n")
-            promptBuilder.append("5. Always inform the user whether documents are reused or newly created\n\n")
-        }
-
-        promptBuilder.append("**PROJECT CONTEXT FROM RETRIEVED DATA:**\n")
+        // Simple prompt instructing LLM to follow the instruction file
+        promptBuilder.append("You are a professional Quality Assurance Lead and documentation expert. Please follow the comprehensive test documentation creation instructions provided in the testDocCreationInstructions.md file. " +
+                "Also check with user if this is an existing project or new project." +
+                "if existing then ask user to provide the existing design document, database link for tables to know the existing datastructures." +
+                "else ignore continue to next steps.\n\n")
+        promptBuilder.append("Use the Jira project data provided below to create detailed test documentation:\n\n")
+        promptBuilder.append("Use tools as necessary to fetch the Jira data and document creation in various formats. understand the user query before making on decision on tool usage. Do not answer any other query that is not releated to the Jira or Test Document creation.\n\n")
+        // Add project context from retrieved data
+        promptBuilder.append("**PROJECT DATA:**\n")
 
         if (projectInfo != null) {
             promptBuilder.append("- Project: ${projectInfo.name} (Key: ${projectInfo.key}, ID: ${projectInfo.id})\n")
@@ -281,57 +186,79 @@ suspend fun main() {
                 promptBuilder.append("\n")
             }
 
-            // Add detailed epic and story information for better context
+            // Add detailed epic and story information
             if (sprintIssues.epics.isNotEmpty()) {
-                promptBuilder.append("- Epic Details:\n")
+                promptBuilder.append("\n**Epic Details:**\n")
                 sprintIssues.epics.forEach { epic ->
-                    promptBuilder.append("  * ${epic.key}: ${epic.summary} [${epic.status}]\n")
+                    promptBuilder.append("- ${epic.key}: ${epic.summary} [${epic.status}]\n")
                     if (epic.description.isNotEmpty()) {
-                        promptBuilder.append("    Description: ${epic.description.take(200)}${if (epic.description.length > 200) "..." else ""}\n")
+                        promptBuilder.append("  Description: ${epic.description.take(200)}${if (epic.description.length > 200) "..." else ""}\n")
                     }
                 }
             }
 
             if (sprintIssues.stories.isNotEmpty()) {
-                promptBuilder.append("- Story Details:\n")
+                promptBuilder.append("\n**Story Details:**\n")
                 sprintIssues.stories.take(10).forEach { story ->
-                    promptBuilder.append("  * ${story.key}: ${story.summary} [${story.status}]\n")
-                    if (story.epicKey != null) promptBuilder.append("    Epic: ${story.epicKey}\n")
+                    promptBuilder.append("- ${story.key}: ${story.summary} [${story.status}]\n")
+                    if (story.epicKey != null) promptBuilder.append("  Epic: ${story.epicKey}\n")
                     if (story.description.isNotEmpty()) {
-                        promptBuilder.append("    Description: ${story.description.take(150)}${if (story.description.length > 150) "..." else ""}\n")
+                        promptBuilder.append("  Description: ${story.description.take(150)}${if (story.description.length > 150) "..." else ""}\n")
                     }
                 }
                 if (sprintIssues.stories.size > 10) {
-                    promptBuilder.append("  ... and ${sprintIssues.stories.size - 10} more stories\n")
+                    promptBuilder.append("... and ${sprintIssues.stories.size - 10} more stories\n")
+                }
+            }
+
+            if (sprintIssues.tasks.isNotEmpty()) {
+                promptBuilder.append("\n**Task Details:**\n")
+                sprintIssues.tasks.take(5).forEach { task ->
+                    promptBuilder.append("- ${task.key}: ${task.summary} [${task.status}]\n")
+                    if (task.parentKey != null) promptBuilder.append("  Parent: ${task.parentKey}\n")
+                }
+                if (sprintIssues.tasks.size > 5) {
+                    promptBuilder.append("... and ${sprintIssues.tasks.size - 5} more tasks\n")
                 }
             }
         }
 
-        promptBuilder.append("\n**MANDATORY ACTIONS:**\n")
-        promptBuilder.append("1. FIRST: Gather additional Jira data if needed using available tools\n")
-        promptBuilder.append("2. ANALYZE: Review all instructions and map them to the Jira data\n")
-        promptBuilder.append("3. CREATE: Generate each document following the exact structure outlined in instructions\n")
-        promptBuilder.append("4. VALIDATE: Check each document against the provided checklist\n")
-        promptBuilder.append("5. SAVE: Use document creation tools to save each document\n")
-        promptBuilder.append("6. VERIFY: Confirm all documents are created and provide download links\n\n")
-
-        promptBuilder.append("**FINAL DELIVERABLES EXPECTED:**\n")
-        promptBuilder.append("- Test Strategy Document (8-12 pages) with all 11 sections completed\n")
-        promptBuilder.append("- Test Approach Document (6-10 pages) with all framework implementations\n")
-        promptBuilder.append("- Test Plan Document (comprehensive) with all 9 steps and matrices\n")
-        promptBuilder.append("- Download links for all created documents\n")
-        promptBuilder.append("- Confirmation that all checklist items are addressed\n\n")
-
-        promptBuilder.append("BEGIN NOW: Start by gathering any additional Jira data needed, then create comprehensive, ")
-        promptBuilder.append("professional test documentation that strictly follows the provided instructions and ")
-        promptBuilder.append("incorporates all the Jira project data for Flutter Sprint FLUT1.")
-
         val enhancedPrompt = promptBuilder.toString()
 
-        println("📝 Enhanced prompt prepared with test documentation instructions")
+        println("📝 Simple prompt prepared with Jira data and instruction to follow testDocCreationInstructions.md")
         println("🔄 Sending request to AI agent...")
 
-        val response = agent.run(enhancedPrompt)
+        val agent = AIAgent(
+            llmModel = model,
+            systemPrompt = enhancedPrompt,
+            toolRegistry = toolRegistry,
+            executor = executor,
+            temperature = 1.0
+        )
+
+        val userPrompt = prompt("user-prompt") {
+            user("""Create various detailed test documentation for the Flutter project and sprint FLUT based on the provided Jira data. 
+                |this is a new project across devices and also has a secured backend.
+                |also generate this optional artifacts if possible and save as separate downloadable files named after each artifact requested below and not as Test Approach.
+                |- Story-level traceability matrix (Jira to test cases to automation)
+                |- BDD test cases (Gherkin) per story with positive/negative/resilience scenarios
+                |- API contract test suite skeleton (Postman/Newman or Pact CDC)
+                |- Security test checklist tailored to your auth and storage model
+                |- Device/OS coverage matrix and execution schedule
+                |- Test data seed plan for AI personas, rewards tiers, and waitlist scenarios
+            """.trimMargin())
+        }
+
+        val result = client.moderate( userPrompt, OpenAIModels.Moderation.Omni)
+
+        println("Moderation Result: $result")
+
+        if (result.isHarmful) {
+            println("❌ User prompt flagged by moderation: ${result.categories}")
+            return
+        }
+        val response = agent.run(userPrompt.toString())
+
 
         println("\n🎯 Agent Response:")
         println("=".repeat(80))
@@ -342,16 +269,15 @@ suspend fun main() {
         println("❌ Error running agent: ${e.message}")
         e.printStackTrace()
     }
-
 }
 
-@Serializable
-data class beneficiary(val name: String, val acocuntNumber: String, val bankName: String)
-
-@Tool
-@LLMDescription("This tool gets the sentence from the user")
-fun getUserBeneficiaries(userAccount: String): List<beneficiary> {
-    val beneficiaryList = listOf(beneficiary("Alok Kulkarni", "1234567890", "HDFC Bank"),
-        beneficiary("John Doe", "9876543210", "ICICI Bank"))
-    return beneficiaryList
-}
+//@Serializable
+//data class beneficiary(val name: String, val acocuntNumber: String, val bankName: String)
+//
+//@Tool
+//@LLMDescription("This tool gets the sentence from the user")
+//fun getUserBeneficiaries(userAccount: String): List<beneficiary> {
+//    val beneficiaryList = listOf(beneficiary("Alok Kulkarni", "1234567890", "HDFC Bank"),
+//        beneficiary ("John Doe", "9876543210", "ICICI Bank"))
+//    return beneficiaryList
+//}
